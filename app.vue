@@ -127,16 +127,29 @@ function onNameBlur() {
   state.nameTouched = true
 }
 
-/** Replaces [Your name] with the user's name and removes [Your address] and [Your contact details]. */
+/** Inserts newlines so the body is readable (after greeting and before sign-off). */
+function insertParagraphBreaks(text) {
+  if (!text) return ''
+  return text
+    .replace(/\b(Dear [^,]+,)\s*/i, '\n\n$1\n\n')
+    .replace(/\s+(Yours sincerely|Yours faithfully|Kind regards|Best wishes|To the Council,)\s*\.?\s*$/i, '\n\n$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** Replaces [Your name] with the user's name, removes [Your address]/[Your contact details], adds name at end, and formats with newlines. */
 function formatBody(body, userName) {
   if (!body) return ''
   const name = userName?.trim() || ''
-  return body
+  let out = body
     .replace(/\n\[Your address\]\r?\n?/g, '\n')
     .replace(/\n\[Your contact details\]\r?\n?/g, '\n')
     .replace(/\[Your name\]/g, name || '[Your name]')
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()
+  out = insertParagraphBreaks(out)
+  if (name) out = out + '\n' + name
+  return out.trimEnd()
 }
 
 const previewBody = computed(() =>
@@ -162,7 +175,8 @@ const mailtoLink = computed(() => {
   const to = 'Sustainable.Streets@royalgreenwich.gov.uk'
   const subject = encodeURIComponent(currentEmail.value.subject || '')
   const bodyText = formatBody(currentEmail.value.body || '', state.userName)
-  const body = encodeURIComponent(bodyText)
+  const bodyWithLineBreaks = bodyText.replace(/\n/g, '\r\n')
+  const body = encodeURIComponent(bodyWithLineBreaks)
   return `mailto:${to}?subject=${subject}&body=${body}`
 })
 
