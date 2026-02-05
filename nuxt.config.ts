@@ -1,11 +1,11 @@
 export default defineNuxtConfig({
   app: {
     head: {
-      title: 'Parking Design Email Templates',
+      title: 'Sustainable Streets Email Templates',
       meta: [
         {
           name: 'description',
-          content: 'Random email templates for parking design at Royal Greenwich'
+          content: 'Email templates for Sustainable Streets at Royal Greenwich'
         }
       ]
     }

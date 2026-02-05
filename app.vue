@@ -6,11 +6,11 @@
           Royal Borough of Greenwich
         </p>
         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
-          Parking Design – Email Template Generator
+          Sustainable Streets – Email Template Generator
         </h1>
         <p class="text-sm md:text-base text-slate-300">
           Click the button below to open this template in your email app, pre‑filled and ready to send to
-          <span class="font-mono text-emerald-300">parking-design@royalgreenwich.gov.uk</span>.
+          <span class="font-mono text-emerald-300">Sustainable.Streets@royalgreenwich.gov.uk</span>.
         </p>
       </header>
 
@@ -159,7 +159,7 @@ const pickRandomEmail = () => {
 const currentEmail = computed(() => emails[state.currentIndex] || { subject: '', body: '' })
 
 const mailtoLink = computed(() => {
-  const to = 'parking-design@royalgreenwich.gov.uk'
+  const to = 'Sustainable.Streets@royalgreenwich.gov.uk'
   const subject = encodeURIComponent(currentEmail.value.subject || '')
   const bodyText = formatBody(currentEmail.value.body || '', state.userName)
   const body = encodeURIComponent(bodyText)

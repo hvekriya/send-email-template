@@ -1,13 +1,13 @@
 ## Parking Design Email Templates (Nuxt 3)
 
-This is a small Nuxt 3 app that shows a **random email template** for the Parking Design team at the Royal Borough of Greenwich.
+This is a small Nuxt 3 app that shows a **random email template** for Sustainable Streets at the Royal Borough of Greenwich.
 
 Each template has a subject and body. You can:
 
 - **See a random template** on screen
 - **Shuffle** to another random template
 - **Open your email app** with the subject and body pre-filled, addressed to:
-  - `parking-design@royalgreenwich.gov.uk`
+  - `Sustainable.Streets@royalgreenwich.gov.uk`
 
 ### Getting started
 
