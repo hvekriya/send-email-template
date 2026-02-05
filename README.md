@@ -38,19 +38,7 @@ You can change or add templates there; the UI will automatically pick a random o
 
 ### Deploying to Netlify
 
-The repo is set up for Netlify with `netlify.toml` (static build: `npm run generate`, publish: `.output/public`).
+The repo is set up for Netlify with `netlify.toml` (static build: `npm run generate`, publish: `dist`).
 
-**Option A – Deploy via Git (recommended)**
-
-1. Push this repo to GitHub or GitLab.
-2. Log in at [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project**.
-3. Choose your Git provider and select this repository.
-4. Netlify will use the build settings from `netlify.toml`. Click **Deploy site**.
-
-**Option B – Deploy with Netlify CLI**
-
-1. Install the CLI: `npm install -g netlify-cli` (if needed).
-2. Log in: `netlify login`.
-3. Link (or create) a site: `netlify link` or `netlify init`.
-4. Deploy: `netlify deploy --prod` (build runs automatically from `netlify.toml`).
+Auto deploys are enabled.
 
