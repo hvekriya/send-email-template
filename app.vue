@@ -6,11 +6,11 @@
           Royal Borough of Greenwich
         </p>
         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
-          Sustainable Streets – Email Template Generator
+          School Streets – Email Template Generator
         </h1>
         <p class="text-sm md:text-base text-slate-300">
           Click the button below to open this template in your email app, pre‑filled and ready to send to
-          <span class="font-mono text-emerald-300">Sustainable.Streets@royalgreenwich.gov.uk</span>.
+          <span class="font-mono text-emerald-300">schoolstreets@royalgreenwich.gov.uk</span>.
         </p>
       </header>
 
@@ -45,14 +45,6 @@
           <h2 class="text-sm font-semibold tracking-wide text-slate-300 uppercase">
             Current email template
           </h2>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-slate-600/80 bg-slate-800/80 px-4 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-700/80 hover:border-slate-500 transition-colors"
-            @click="pickRandomEmail"
-          >
-            <span>Shuffle</span>
-            <span class="text-slate-400">⟳</span>
-          </button>
         </div>
 
         <div class="rounded-xl border border-slate-700 bg-slate-900/60 p-5 md:p-6 space-y-4">
@@ -79,11 +71,7 @@
       <section class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div class="text-xs text-slate-400 space-y-1">
           <p>
-            Template <span class="font-mono text-slate-200">{{ currentIndex + 1 }}</span>
-            of <span class="font-mono text-slate-200">{{ emails.length }}</span>
-          </p>
-          <p class="text-[11px]">
-            You can refresh the page or use the shuffle button to see another random template.
+            School Streets objection template
           </p>
         </div>
 
@@ -112,7 +100,9 @@
 </template>
 
 <script setup>
-import emails from '~/data/emails.json'
+import allEmails from '~/data/emails.json'
+
+const emails = allEmails.length ? [allEmails[allEmails.length - 1]] : []
 
 const state = reactive({
   currentIndex: 0,
@@ -137,10 +127,11 @@ function insertParagraphBreaks(text) {
     .trim()
 }
 
-/** Replaces [Your name] with the user's name, removes [Your address]/[Your contact details], adds name at end, and formats with newlines. */
+/** Replaces [Your name] with the user's name, removes [Your address]/[Your contact details], adds name at end if needed, and formats with newlines. */
 function formatBody(body, userName) {
   if (!body) return ''
   const name = userName?.trim() || ''
+  const hadNamePlaceholder = /\[Your name\]/.test(body)
   let out = body
     .replace(/\n\[Your address\]\r?\n?/g, '\n')
     .replace(/\n\[Your contact details\]\r?\n?/g, '\n')
@@ -148,7 +139,7 @@ function formatBody(body, userName) {
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()
   out = insertParagraphBreaks(out)
-  if (name) out = out + '\n' + name
+  if (name && !hadNamePlaceholder) out = out + '\n' + name
   return out.trimEnd()
 }
 
@@ -156,23 +147,10 @@ const previewBody = computed(() =>
   formatBody(currentEmail.value.body || '', state.userName)
 )
 
-const pickRandomEmail = () => {
-  if (!emails.length) return
-
-  let next = Math.floor(Math.random() * emails.length)
-
-  // Avoid repeating the same email if there is more than one
-  if (emails.length > 1 && next === state.currentIndex) {
-    next = (next + 1) % emails.length
-  }
-
-  state.currentIndex = next
-}
-
 const currentEmail = computed(() => emails[state.currentIndex] || { subject: '', body: '' })
 
 const mailtoLink = computed(() => {
-  const to = 'Sustainable.Streets@royalgreenwich.gov.uk'
+  const to = 'schoolstreets@royalgreenwich.gov.uk'
   const subject = encodeURIComponent(currentEmail.value.subject || '')
   const bodyText = formatBody(currentEmail.value.body || '', state.userName)
   const bodyWithLineBreaks = bodyText.replace(/\n/g, '\r\n')
@@ -180,13 +158,6 @@ const mailtoLink = computed(() => {
   return `mailto:${to}?subject=${subject}&body=${body}`
 })
 
-// Pick an initial random email on load
-onMounted(() => {
-  pickRandomEmail()
-})
-
-const emailsLength = emails.length
-const currentIndex = computed(() => state.currentIndex)
 </script>
 
 <style>
