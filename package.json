@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@netlify/blobs": "^8.2.0",
     "nuxt": "latest",
     "vue": "latest",
     "vue-router": "latest"

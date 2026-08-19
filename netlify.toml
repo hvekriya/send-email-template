@@ -4,3 +4,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/api/clicks"
+  to = "/.netlify/functions/clicks"
+  status = 200
+  force = true

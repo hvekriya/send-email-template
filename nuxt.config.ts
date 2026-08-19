@@ -10,6 +10,11 @@ export default defineNuxtConfig({
       ]
     }
   },
+  nitro: {
+    prerender: {
+      ignore: ['/api/clicks']
+    }
+  },
   css: ['~/assets/css/tailwind.css'],
   postcss: {
     plugins: {
