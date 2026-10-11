@@ -26,6 +26,12 @@ Each template has a subject and body. You can:
 
 3. Open `http://localhost:3000` in your browser.
 
+### CPZ councillor letters
+
+- The **CPZ** option (the default) shows one of 30 letters from `data/cpz-emails.json`, picked at random in each visitor's browser. "Show a different letter" picks another.
+- Each entry has `id`, `subject` and `body`. Bodies start with `Dear Councillor,` (replaced with the selected councillors' names) and end with `[Your name]` (replaced with the sender's name).
+- Opens are counted separately as `cpz` in `/api/clicks`.
+
 ### Where to edit templates
 
 - All templates live in `data/emails.json`.

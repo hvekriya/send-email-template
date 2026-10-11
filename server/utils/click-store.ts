@@ -1,4 +1,4 @@
-import { EMPTY_COUNTS, withTotal } from './click-counts'
+import { EMPTY_COUNTS, withTotal, type TemplateKey } from './click-counts'
 
 const memoryCounts = { ...EMPTY_COUNTS }
 
@@ -17,17 +17,14 @@ export async function readCounts() {
   }
 }
 
-export async function incrementCount(template: 'mandir' | 'nursery') {
-  const key = template === 'nursery' ? 'nursery' : 'mandir'
-
+export async function incrementCount(key: TemplateKey) {
   try {
     const store = await netlifyStore()
     const saved = withTotal((await store.get('counts', { type: 'json' })) || memoryCounts)
     saved[key] += 1
     const next = withTotal(saved)
-    await store.setJSON('counts', { mandir: next.mandir, nursery: next.nursery })
-    memoryCounts.mandir = next.mandir
-    memoryCounts.nursery = next.nursery
+    await store.setJSON('counts', { cpz: next.cpz, mandir: next.mandir, nursery: next.nursery })
+    Object.assign(memoryCounts, { cpz: next.cpz, mandir: next.mandir, nursery: next.nursery })
     return next
   } catch {
     memoryCounts[key] += 1

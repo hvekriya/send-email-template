@@ -6,10 +6,10 @@
           Royal Borough of Greenwich
         </p>
         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
-          School Streets – Email Template Generator
+          CPZ &amp; School Streets – Email Your Councillors
         </h1>
         <p class="text-sm md:text-base text-slate-300">
-          Enter your postcode to find your ward councillors, then open a pre-filled objection email to the people you choose.
+          Enter your postcode to find your ward councillors, then open a pre-filled email to the people you choose.
         </p>
       </header>
 
@@ -187,9 +187,9 @@
           <legend class="text-sm font-semibold tracking-wide text-slate-300 uppercase">
             Email template
           </legend>
-          <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label
-              v-for="template in templates"
+              v-for="template in templateOptions"
               :key="template.id"
               class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors"
               :class="state.templateId === template.id
@@ -206,7 +206,7 @@
               <span>
                 <span class="block text-sm font-semibold text-slate-100">{{ template.label }}</span>
                 <span class="block text-xs text-slate-400 mt-0.5">
-                  {{ template.id === 'mandir' ? 'Temple attendees' : 'Nursery drop-off and pick-up' }}
+                  {{ template.description }}
                 </span>
               </span>
             </label>
@@ -232,9 +232,19 @@
           </div>
 
           <div class="space-y-1.5">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Subject
-            </p>
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                Subject
+              </p>
+              <button
+                v-if="isCpz"
+                type="button"
+                class="text-xs text-emerald-300 hover:text-emerald-200"
+                @click="shuffleCpz"
+              >
+                Show a different letter ↻
+              </button>
+            </div>
             <p class="text-base md:text-lg font-medium text-emerald-200">
               {{ currentEmail.subject }}
             </p>
@@ -251,9 +261,12 @@
 
       <section class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div class="text-xs text-slate-400 space-y-1">
-          <p>{{ currentEmail.label }} objection template</p>
+          <p v-if="isCpz">CPZ letter {{ state.cpzIndex + 1 }} of {{ cpzEmails.length }} – feel free to edit it in your email app</p>
+          <p v-else>{{ currentEmail.label }} objection template</p>
           <p v-if="countsLoaded">
             Opened in email app:
+            <span class="font-mono text-slate-200">CPZ {{ counts.cpz }}</span>
+            ·
             <span class="font-mono text-slate-200">Mandir {{ counts.mandir }}</span>
             ·
             <span class="font-mono text-slate-200">Nursery {{ counts.nursery }}</span>
@@ -289,12 +302,25 @@
 
 <script setup>
 import templates from '~/data/templates.json'
+import cpzEmails from '~/data/cpz-emails.json'
 import wardData from '~/data/wards.json'
 
 const UK_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i
 
+const TEMPLATE_DESCRIPTIONS = {
+  cpz: 'Parking controls – write to your councillors',
+  mandir: 'School Streets – temple attendees',
+  nursery: 'School Streets – nursery drop-off and pick-up'
+}
+
+const templateOptions = [
+  { id: 'cpz', label: 'CPZ' },
+  ...templates
+].map((template) => ({ ...template, description: TEMPLATE_DESCRIPTIONS[template.id] || '' }))
+
 const state = reactive({
-  templateId: templates[0]?.id || 'mandir',
+  templateId: 'cpz',
+  cpzIndex: 0,
   userName: '',
   nameTouched: false,
   postcode: '',
@@ -308,6 +334,7 @@ const lookedUpPostcode = ref('')
 const hiddenPhotos = reactive({})
 
 const counts = reactive({
+  cpz: 0,
   mandir: 0,
   nursery: 0,
   total: 0
@@ -458,7 +485,7 @@ function formatBody(body, userName) {
   const name = userName?.trim() || ''
   const hadNamePlaceholder = /\[Your name\]/.test(body)
   let out = body
-    .replace(/^Dear School Streets Traffic Regulation Order Team,/i, councillorGreeting())
+    .replace(/^Dear (School Streets Traffic Regulation Order Team|Councillor),/i, councillorGreeting())
     .replace(/\n\[Your address\]\r?\n?/g, '\n')
     .replace(/\n\[Your contact details\]\r?\n?/g, '\n')
     .replace(/\[Your name\]/g, name || '[Your name]')
@@ -469,9 +496,25 @@ function formatBody(body, userName) {
   return out.trimEnd()
 }
 
-const currentEmail = computed(() =>
-  templates.find((template) => template.id === state.templateId) || templates[0] || { subject: '', body: '', label: '' }
-)
+const isCpz = computed(() => state.templateId === 'cpz')
+
+/** Picks a different random CPZ letter so neighbours are unlikely to send the same text. */
+function shuffleCpz() {
+  if (cpzEmails.length < 2) return
+  let next = state.cpzIndex
+  while (next === state.cpzIndex) {
+    next = Math.floor(Math.random() * cpzEmails.length)
+  }
+  state.cpzIndex = next
+}
+
+const currentEmail = computed(() => {
+  if (isCpz.value) {
+    const letter = cpzEmails[state.cpzIndex] || cpzEmails[0]
+    return { label: 'CPZ', subject: letter.subject, body: letter.body }
+  }
+  return templates.find((template) => template.id === state.templateId) || templates[0] || { subject: '', body: '', label: '' }
+})
 
 const previewBody = computed(() =>
   formatBody(currentEmail.value.body || '', state.userName)
@@ -488,9 +531,10 @@ const mailtoLink = computed(() => {
 
 function applyCounts(data) {
   if (!data) return
+  counts.cpz = Number(data.cpz) || 0
   counts.mandir = Number(data.mandir) || 0
   counts.nursery = Number(data.nursery) || 0
-  counts.total = Number(data.total) || counts.mandir + counts.nursery
+  counts.total = Number(data.total) || counts.cpz + counts.mandir + counts.nursery
 }
 
 async function loadCounts() {
@@ -515,6 +559,8 @@ function trackOpen() {
 }
 
 onMounted(() => {
+  // Chosen in the browser (not at build time) so each visitor gets their own random letter.
+  state.cpzIndex = Math.floor(Math.random() * cpzEmails.length)
   loadCounts()
 })
 </script>

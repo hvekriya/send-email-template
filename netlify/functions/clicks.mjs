@@ -1,16 +1,21 @@
 import { getStore } from '@netlify/blobs'
 
-const EMPTY = { mandir: 0, nursery: 0 }
+const KEYS = ['cpz', 'mandir', 'nursery']
 
 function withTotal(counts) {
-  const mandir = Number(counts?.mandir) || 0
-  const nursery = Number(counts?.nursery) || 0
-  return { mandir, nursery, total: mandir + nursery }
+  const out = {}
+  for (const key of KEYS) out[key] = Number(counts?.[key]) || 0
+  out.total = KEYS.reduce((sum, key) => sum + out[key], 0)
+  return out
+}
+
+function normaliseTemplate(value) {
+  return KEYS.includes(value) ? value : 'mandir'
 }
 
 export default async (req) => {
   const store = getStore('email-clicks')
-  const current = withTotal((await store.get('counts', { type: 'json' })) || EMPTY)
+  const current = withTotal((await store.get('counts', { type: 'json' })) || {})
 
   if (req.method === 'GET') {
     return Response.json(current)
@@ -18,10 +23,11 @@ export default async (req) => {
 
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}))
-    const key = body?.template === 'nursery' ? 'nursery' : 'mandir'
+    const key = normaliseTemplate(body?.template)
     current[key] += 1
     const next = withTotal(current)
-    await store.setJSON('counts', { mandir: next.mandir, nursery: next.nursery })
+    const { total, ...saved } = next
+    await store.setJSON('counts', saved)
     return Response.json(next)
   }
 
