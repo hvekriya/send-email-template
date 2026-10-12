@@ -1,50 +1,42 @@
-## Parking Design Email Templates (Nuxt 3)
+## Email Your Councillors – CPZ & School Streets (Nuxt 3)
 
-This is a small Nuxt 3 app that shows a **random email template** for Sustainable Streets at the Royal Borough of Greenwich.
+A small Nuxt app for SKS Swaminarayan Temple Woolwich attendees who live in Royal Greenwich. Visitors enter their postcode, pick their ward councillors and open a pre-filled email about the CPZ and School Street on St Margaret's Grove.
 
-Each template has a subject and body. You can:
+### How the letters work
 
-- **See a random template** on screen
-- **Shuffle** to another random template
-- **Open your email app** with the subject and body pre-filled, addressed to:
-  - `Sustainable.Streets@royalgreenwich.gov.uk`
+- There are 30 letters in `data/cpz-emails.json`. Each entry has `id`, `subject` and `body`. Bodies start with `Dear Councillor,` (replaced with the selected councillors' names) and end with `[Your name]` (replaced with the sender's name).
+- **Each letter is only ever sent once, across the whole site.** When a visitor clicks "Open in email app", the letter is marked as used on the server and never shown again. If two people click the same letter at the same moment, the second person is given a different unused letter.
+- The page shows a random unused letter; "Show a different letter" cycles through unused ones.
+- A slim progress bar in the top right shows how many letters are left.
+- When every letter has been used, the page says "All letters have been used." and the button is turned off. To continue the campaign, add more letters to `data/cpz-emails.json` with new, unique `id`s.
 
-### Getting started
+Used letters are stored in Netlify Blobs (store `cpz-letters`, keys `used/<id>`) by the function in `netlify/functions/letters.mjs`, served at `/api/letters`.
 
-1. **Install dependencies**
+### Resetting the used letters
+
+Only if you need to start again (for example after testing):
+
+1. In Netlify, add an environment variable `LETTERS_RESET_SECRET` with a long random value, then redeploy.
+2. Run:
 
    ```bash
-   cd nuxt-email-templates
-   npm install
+   curl -X POST https://object-school-street.netlify.app/api/letters \
+     -H "content-type: application/json" \
+     -H "x-reset-secret: YOUR_SECRET" \
+     -d '{"action":"reset"}'
    ```
 
-2. **Run the dev server**
+Without that variable set, resetting is switched off.
 
-   ```bash
-   npm run dev
-   ```
+### Running locally
 
-3. Open `http://localhost:3000` in your browser.
+```bash
+npm install
+npx netlify dev
+```
 
-### CPZ councillor letters
-
-- The **CPZ** option (the default) shows one of 30 letters from `data/cpz-emails.json`, picked at random in each visitor's browser. "Show a different letter" picks another.
-- Each entry has `id`, `subject` and `body`. Bodies start with `Dear Councillor,` (replaced with the selected councillors' names) and end with `[Your name]` (replaced with the sender's name).
-- Opens are counted separately as `cpz` in `/api/clicks`.
-
-### Where to edit templates
-
-- All templates live in `data/emails.json`.
-- Each entry has:
-  - `id` – a numeric identifier
-  - `subject` – the email subject line
-  - `body` – the email body text
-
-You can change or add templates there; the UI will automatically pick a random one.
+Use `netlify dev` rather than `npm run dev` so the `/api/letters` function runs too. Without it, the page shows an error and sending stays off, because it can't check which letters are unused.
 
 ### Deploying to Netlify
 
-The repo is set up for Netlify with `netlify.toml` (static build: `npm run generate`, publish: `dist`).
-
-Auto deploys are enabled.
-
+`netlify.toml` builds with `npm run generate` and publishes `dist`. Functions are bundled with esbuild. Auto deploys are enabled.

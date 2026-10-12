@@ -1,5 +1,19 @@
 <template>
   <div class="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center px-4 py-10">
+    <div
+      v-if="letters.status === 'ready'"
+      class="fixed top-4 right-4 z-10 h-1.5 w-28 sm:w-40 overflow-hidden rounded-full bg-slate-700"
+      role="progressbar"
+      aria-label="Letters remaining"
+      aria-valuemin="0"
+      :aria-valuemax="letters.total"
+      :aria-valuenow="letters.remaining.length"
+    >
+      <div
+        class="h-full rounded-full bg-emerald-400 transition-all duration-500"
+        :style="{ width: `${remainingPercent}%` }"
+      />
+    </div>
     <main class="w-full max-w-3xl bg-slate-800/80 border border-slate-700 rounded-2xl shadow-2xl shadow-slate-900/40 p-8 md:p-10 space-y-8">
       <header class="space-y-2">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
@@ -182,44 +196,28 @@
         </p>
       </section>
 
-      <section class="space-y-3">
-        <fieldset>
-          <legend class="text-sm font-semibold tracking-wide text-slate-300 uppercase">
-            Email template
-          </legend>
-          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <label
-              v-for="template in templateOptions"
-              :key="template.id"
-              class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors"
-              :class="state.templateId === template.id
-                ? 'border-emerald-500 bg-emerald-500/10'
-                : 'border-slate-600 bg-slate-800/80 hover:border-slate-500'"
-            >
-              <input
-                v-model="state.templateId"
-                class="mt-1 h-4 w-4 accent-emerald-500"
-                type="radio"
-                name="email-template"
-                :value="template.id"
-              />
-              <span>
-                <span class="block text-sm font-semibold text-slate-100">{{ template.label }}</span>
-                <span class="block text-xs text-slate-400 mt-0.5">
-                  {{ template.description }}
-                </span>
-              </span>
-            </label>
-          </div>
-        </fieldset>
-      </section>
-
       <section class="space-y-4">
         <h2 class="text-sm font-semibold tracking-wide text-slate-300 uppercase">
-          Current email template
+          Your email
         </h2>
 
-        <div class="rounded-xl border border-slate-700 bg-slate-900/60 p-5 md:p-6 space-y-4">
+        <p v-if="letters.status === 'loading'" class="text-sm text-slate-400">
+          Loading your letter…
+        </p>
+
+        <p v-else-if="letters.status === 'error'" class="text-sm text-amber-400" role="alert">
+          We couldn't load the letters just now. Please refresh the page to try again.
+        </p>
+
+        <div
+          v-else-if="allUsed"
+          class="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center"
+          role="status"
+        >
+          <p class="text-base md:text-lg font-medium text-slate-100">All letters have been used.</p>
+        </div>
+
+        <div v-else class="rounded-xl border border-slate-700 bg-slate-900/60 p-5 md:p-6 space-y-4">
           <div class="space-y-1.5">
             <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
               To
@@ -237,10 +235,10 @@
                 Subject
               </p>
               <button
-                v-if="isCpz"
+                v-if="letters.remaining.length > 1"
                 type="button"
                 class="text-xs text-emerald-300 hover:text-emerald-200"
-                @click="shuffleCpz"
+                @click="pickRandomLetter"
               >
                 Show a different letter ↻
               </button>
@@ -260,28 +258,21 @@
       </section>
 
       <section class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div class="text-xs text-slate-400 space-y-1">
-          <p v-if="isCpz">CPZ letter {{ state.cpzIndex + 1 }} of {{ cpzEmails.length }} – feel free to edit it in your email app</p>
-          <p v-else>{{ currentEmail.label }} objection template</p>
-          <p v-if="countsLoaded">
-            Opened in email app:
-            <span class="font-mono text-slate-200">CPZ {{ counts.cpz }}</span>
-            ·
-            <span class="font-mono text-slate-200">Mandir {{ counts.mandir }}</span>
-            ·
-            <span class="font-mono text-slate-200">Nursery {{ counts.nursery }}</span>
-          </p>
+        <div class="text-xs text-slate-400 space-y-1" aria-live="polite">
+          <p v-if="notice" class="text-emerald-200">{{ notice }}</p>
+          <p v-if="sendError" class="text-amber-400" role="alert">{{ sendError }}</p>
+          <p v-if="currentLetter && !notice && !sendError">Feel free to edit the letter in your email app before sending.</p>
         </div>
 
-        <a
+        <button
           v-if="canSendEmail"
-          :href="mailtoLink"
+          type="button"
           class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 transition"
-          @click="trackOpen"
+          @click="sendEmail"
         >
           <span>Open in email app</span>
           <span class="text-slate-900/80 text-base">↗</span>
-        </a>
+        </button>
         <button
           v-else
           type="button"
@@ -289,11 +280,13 @@
           disabled
           aria-describedby="send-required-hint"
         >
-          <span>Open in email app</span>
+          <span>{{ claiming ? 'Opening…' : 'Open in email app' }}</span>
           <span class="text-base">↗</span>
         </button>
         <p id="send-required-hint" class="sr-only">
-          Enter your name and select at least one councillor to enable this button.
+          {{ allUsed
+            ? 'All letters have been used.'
+            : 'Enter your name and select at least one councillor to enable this button.' }}
         </p>
       </section>
     </main>
@@ -301,26 +294,13 @@
 </template>
 
 <script setup>
-import templates from '~/data/templates.json'
-import cpzEmails from '~/data/cpz-emails.json'
+import lettersData from '~/data/cpz-emails.json'
 import wardData from '~/data/wards.json'
 
 const UK_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i
 
-const TEMPLATE_DESCRIPTIONS = {
-  cpz: 'Parking controls – write to your councillors',
-  mandir: 'School Streets – temple attendees',
-  nursery: 'School Streets – nursery drop-off and pick-up'
-}
-
-const templateOptions = [
-  { id: 'cpz', label: 'CPZ' },
-  ...templates
-].map((template) => ({ ...template, description: TEMPLATE_DESCRIPTIONS[template.id] || '' }))
-
 const state = reactive({
-  templateId: 'cpz',
-  cpzIndex: 0,
+  letterId: null,
   userName: '',
   nameTouched: false,
   postcode: '',
@@ -333,13 +313,23 @@ const lookupError = ref('')
 const lookedUpPostcode = ref('')
 const hiddenPhotos = reactive({})
 
-const counts = reactive({
-  cpz: 0,
-  mandir: 0,
-  nursery: 0,
-  total: 0
+// Which letters are still unused, site-wide (from /api/letters).
+const letters = reactive({
+  status: 'loading', // 'loading' | 'ready' | 'error'
+  total: lettersData.length,
+  remaining: []
 })
-const countsLoaded = ref(false)
+const claiming = ref(false)
+const notice = ref('')
+const sendError = ref('')
+
+const allUsed = computed(() => letters.status === 'ready' && letters.remaining.length === 0)
+const remainingPercent = computed(() =>
+  letters.total ? Math.round((letters.remaining.length / letters.total) * 100) : 0
+)
+const currentLetter = computed(() =>
+  lettersData.find((letter) => letter.id === state.letterId) || null
+)
 
 const currentWard = computed(() =>
   wardData.wards.find((ward) => ward.name === state.wardName) || null
@@ -353,7 +343,11 @@ const selectedCouncillors = computed(() => {
 })
 
 const canSendEmail = computed(() =>
-  state.userName.trim().length > 0 && selectedCouncillors.value.length > 0
+  state.userName.trim().length > 0
+  && selectedCouncillors.value.length > 0
+  && !!currentLetter.value
+  && !allUsed.value
+  && !claiming.value
 )
 const showNameError = computed(() => state.nameTouched && !state.userName.trim())
 
@@ -485,7 +479,7 @@ function formatBody(body, userName) {
   const name = userName?.trim() || ''
   const hadNamePlaceholder = /\[Your name\]/.test(body)
   let out = body
-    .replace(/^Dear (School Streets Traffic Regulation Order Team|Councillor),/i, councillorGreeting())
+    .replace(/^Dear Councillor,/i, councillorGreeting())
     .replace(/\n\[Your address\]\r?\n?/g, '\n')
     .replace(/\n\[Your contact details\]\r?\n?/g, '\n')
     .replace(/\[Your name\]/g, name || '[Your name]')
@@ -496,72 +490,85 @@ function formatBody(body, userName) {
   return out.trimEnd()
 }
 
-const isCpz = computed(() => state.templateId === 'cpz')
-
-/** Picks a different random CPZ letter so neighbours are unlikely to send the same text. */
-function shuffleCpz() {
-  if (cpzEmails.length < 2) return
-  let next = state.cpzIndex
-  while (next === state.cpzIndex) {
-    next = Math.floor(Math.random() * cpzEmails.length)
-  }
-  state.cpzIndex = next
-}
-
-const currentEmail = computed(() => {
-  if (isCpz.value) {
-    const letter = cpzEmails[state.cpzIndex] || cpzEmails[0]
-    return { label: 'CPZ', subject: letter.subject, body: letter.body }
-  }
-  return templates.find((template) => template.id === state.templateId) || templates[0] || { subject: '', body: '', label: '' }
-})
+// Shown in the preview; the same letter is used for the email unless someone else claims it first.
+const currentEmail = computed(() =>
+  currentLetter.value || { subject: '', body: '' }
+)
 
 const previewBody = computed(() =>
   formatBody(currentEmail.value.body || '', state.userName)
 )
 
-const mailtoLink = computed(() => {
+function buildMailto(letter) {
   const to = selectedCouncillors.value.map((councillor) => councillor.email).join(',')
-  const subject = encodeURIComponent(currentEmail.value.subject || '')
-  const bodyText = formatBody(currentEmail.value.body || '', state.userName)
-  const bodyWithLineBreaks = bodyText.replace(/\n/g, '\r\n')
-  const body = encodeURIComponent(bodyWithLineBreaks)
-  return `mailto:${to}?subject=${subject}&body=${body}`
-})
-
-function applyCounts(data) {
-  if (!data) return
-  counts.cpz = Number(data.cpz) || 0
-  counts.mandir = Number(data.mandir) || 0
-  counts.nursery = Number(data.nursery) || 0
-  counts.total = Number(data.total) || counts.cpz + counts.mandir + counts.nursery
+  const subject = encodeURIComponent(letter.subject || '')
+  const bodyText = formatBody(letter.body || '', state.userName).replace(/\n/g, '\r\n')
+  return `mailto:${to}?subject=${subject}&body=${encodeURIComponent(bodyText)}`
 }
 
-async function loadCounts() {
+function applyLetterState(data) {
+  letters.total = Number(data?.total) || lettersData.length
+  letters.remaining = Array.isArray(data?.remaining) ? data.remaining.map(Number) : []
+  letters.status = 'ready'
+}
+
+/** Shows a random unused letter, different from the current one where possible. */
+function pickRandomLetter() {
+  const pool = letters.remaining.filter((id) => id !== state.letterId)
+  const choices = pool.length ? pool : letters.remaining
+  state.letterId = choices.length
+    ? choices[Math.floor(Math.random() * choices.length)]
+    : null
+}
+
+async function loadLetters() {
   try {
-    applyCounts(await $fetch('/api/clicks'))
-    countsLoaded.value = true
+    applyLetterState(await $fetch('/api/letters'))
+    pickRandomLetter()
   } catch {
-    // Counts are only available when the API is running (nuxt dev or Netlify).
+    // Without the server we can't guarantee a letter hasn't been used, so sending stays off.
+    letters.status = 'error'
   }
 }
 
-function trackOpen() {
-  $fetch('/api/clicks', {
-    method: 'POST',
-    body: { template: state.templateId }
-  })
-    .then((data) => {
-      applyCounts(data)
-      countsLoaded.value = true
+/** Marks a letter as used on the server, then opens the email app with it. */
+async function sendEmail() {
+  if (!canSendEmail.value) return
+  claiming.value = true
+  notice.value = ''
+  sendError.value = ''
+  const shownId = state.letterId
+
+  try {
+    const result = await $fetch('/api/letters', {
+      method: 'POST',
+      body: { action: 'claim', id: shownId }
     })
-    .catch(() => {})
+    applyLetterState(result)
+
+    const letter = lettersData.find((item) => item.id === Number(result?.claimed))
+    if (!letter) {
+      state.letterId = null
+      return
+    }
+
+    window.location.href = buildMailto(letter)
+    notice.value = letter.id === shownId
+      ? 'Your email app should now be open. Thank you for taking part.'
+      : 'That letter had just been used by someone else, so a different one has opened in your email app. Thank you for taking part.'
+
+    // This letter is now used, so show a fresh one in case someone else uses this device.
+    pickRandomLetter()
+  } catch {
+    sendError.value = "We couldn't open your email just now. Please try again in a moment."
+  } finally {
+    claiming.value = false
+  }
 }
 
 onMounted(() => {
-  // Chosen in the browser (not at build time) so each visitor gets their own random letter.
-  state.cpzIndex = Math.floor(Math.random() * cpzEmails.length)
-  loadCounts()
+  // Loaded in the browser (not at build time) so the list of unused letters is always current.
+  loadLetters()
 })
 </script>
 
