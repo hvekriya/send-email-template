@@ -4,7 +4,7 @@ A small Nuxt app for SKS Swaminarayan Temple Woolwich attendees who live in Roya
 
 ### How the letters work
 
-- There are 30 letters in `data/cpz-emails.json`. Each entry has `id`, `subject` and `body`. Bodies start with `Dear Councillor,` (replaced with the selected councillors' names) and end with `[Your name]` (replaced with the sender's name).
+- There are 80 letters in `data/cpz-emails.json`. Each entry has `id`, `subject` and `body`. Bodies start with `Dear Councillor,` (replaced with the selected councillors' names) and end with `[Your name]` (replaced with the sender's name).
 - **Each letter is only ever sent once, across the whole site.** When a visitor clicks "Open in email app", the letter is marked as used on the server and never shown again. If two people click the same letter at the same moment, the second person is given a different unused letter.
 - The page shows a random unused letter; "Show a different letter" cycles through unused ones.
 - A slim progress bar in the top right shows how many letters are left.
